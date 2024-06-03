@@ -1,11 +1,12 @@
 # Imports
-from django.utils import timezone
+from pprint import pprint
 
 from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from vendor_management_system.purchase_orders.models import PurchaseOrder
+from vendor_management_system.purchase_orders.serializers import PurchaseOrderSerializer
 
 
 # Create a signal to set the issue_date when a PurchaseOrder is issued
@@ -19,8 +20,11 @@ def set_issue_date(sender, instance, **kwargs):
 
     # Check if the status is changing from PENDING to ISSUED
     if old_instance.status == "PENDING" and instance.status == "ISSUED":
-        # Set the issue_date to the current date
-        instance.issue_date = timezone.now().date()
+        # # * Set the issue_date to the current date
+        # instance.issue_date = timezone.now().date()
+
+        # ! Set the issue date to the date passed
+        instance.issue_date = instance.issue_date
 
 
 # Create a signal to set the acknowledgment_date when a PurchaseOrder is acknowledged
@@ -34,8 +38,11 @@ def set_acknowledgment_date(sender, instance, **kwargs):
 
     # Check if the status is changing from ISSUED to ACKNOWLEDGED
     if old_instance.status == "ISSUED" and instance.status == "ACKNOWLEDGED":
-        # Set the acknowledgment_date to the current date
-        instance.acknowledgment_date = timezone.now().date()
+        # # * Set the acknowledgment_date to the current date
+        # instance.acknowledgment_date = timezone.now().date()
+
+        # ! Set the acknowledgment date to the date passed
+        instance.acknowledgment_date = instance.acknowledgment_date
 
 
 # Create a signal to set the actual_delivery_date when a PurchaseOrder is marked as DELIVERED
@@ -49,8 +56,11 @@ def set_actual_delivery_date(sender, instance, **kwargs):
 
     # Check if the status is changing from ACKNOWLEDGED to DELIVERED
     if old_instance.status == "ACKNOWLEDGED" and instance.status == "DELIVERED":
-        # Set the actual_delivery_date to the current date
-        instance.actual_delivery_date = timezone.now().date()
+        # # * Set the actual_delivery_date to the current date
+        # instance.actual_delivery_date = timezone.now().date()
+
+        # ! Set the actual delivery date to the date passed
+        instance.actual_delivery_date = instance.actual_delivery_date
 
 
 # Create a signal to set the on_time_delivery_rate of the Vendor when a PurchaseOrder is marked as DELIVERED

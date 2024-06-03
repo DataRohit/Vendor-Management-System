@@ -231,9 +231,13 @@ CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
 CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_BEAT_SCHEDULE = {
+    "update_order_status": {
+        "task": "vendor_management_system.purchase_orders.tasks.update_order_status",
+        "schedule": crontab(minute="*/5"),  # Run every 5 minutes
+    },
     "record_historical_performance": {
         "task": "vendor_management_system.historical_performances.tasks.record_historical_performance",
-        "schedule": crontab(hour="*/6"),  # Run every 6 hours
+        "schedule": crontab(minute="*/15"),  # Run every 15 minutes
     },
 }
 
