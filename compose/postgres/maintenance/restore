@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+### Restore database from a backup.
+###
+### Parameters:
+###     <1> filename of an existing backup.
+###
+### Usage:
+###     $ docker compose -f <environment>.yml (exec |run --rm) postgres restore <1>
+
+# Set shell options
+set -o errexit    # Exit immediately if a command exits with a non-zero status
+set -o pipefail   # Return a failure status if any command in a pipeline fails
+set -o nounset    # Exit if an unset variable is referenced
+
+# Define the directory where the script is located
+working_dir="$(dirname ${0})"
+
+# Source constant variables and functions
+source "${working_dir}/_sourced/constants.sh"
+source "${working_dir}/_sourced/messages.sh"
+
+# Check if the backup filename is provided as an argument
+if [[ -z ${1+x} ]]; then
+    message_error "Backup filename is not specified yet it is a required parameter. Make sure you provide one and try again."
+    exit 1
+fi
+
+# Construct the full path of the backup file
+backup_filename="${BACKUP_DIR_PATH}/${1}"
+
+# Check if the specified backup file exists
+if [[ ! -f "${backup_filename}" ]]; then
+    message_error "No backup with the specified filename found. Check out the 'backups' maintenance script output to see if there is one and try again."
+    exit 1
+fi
+
+# Inform the user about the restoration process
+message_welcome "Restoring the '${POSTGRES_DB}' database from the '${backup_filename}' backup..."
+
+# Check if restoring as 'postgres' user is attempted
+if [[ "${POSTGRES_USER}" == "postgres" ]]; then
+    message_error "Restoring as 'postgres' user is not supported. Assign 'POSTGRES_USER' env with another one and try again."
+    exit 1
+fi
+
+# Set PostgreSQL environment variables
+export PGHOST="${POSTGRES_HOST}"
+export PGPORT="${POSTGRES_PORT}"
+export PGUSER="${POSTGRES_USER}"
+export PGPASSWORD="${POSTGRES_PASSWORD}"
+export PGDATABASE="${POSTGRES_DB}"
+
+# Drop the existing database
+message_info "Dropping the database..."
+dropdb "${PGDATABASE}"
+
+# Create a new database
+message_info "Creating a new database..."
+createdb --owner="${POSTGRES_USER}"
+
+# Apply the backup to the new database
+message_info "Applying the backup to the new database..."
+gunzip -c "${backup_filename}" | psql "${POSTGRES_DB}"
+
+# Inform the user about the successful restoration of the database
+message_success "The '${POSTGRES_DB}' database has been restored from the '${backup_filename}' backup."

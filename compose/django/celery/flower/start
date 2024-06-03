@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Set errexit to exit immediately if a command exits with a non-zero status
+set -o errexit
+
+# Set nounset to exit if an unset variable is referenced
+set -o nounset
+
+
+# Execute watchfiles command with the following arguments:
+# --filter python: Filter files for Python code
+# celery.__main__.main: Run the celery main function
+# --args: Pass additional arguments to the celery main function
+# "-A config.celery_app": Specify the celery app
+# "-b \"${CELERY_BROKER_URL}\"": Set the Celery broker URL
+# "flower": Run Flower
+# "--basic_auth=\"${CELERY_FLOWER_USER}:${CELERY_FLOWER_PASSWORD}\"": Set basic authentication credentials for Flower
+exec python -m watchfiles --filter python celery.__main__.main \
+    --args \
+    "-A config.celery_app -b \"${CELERY_BROKER_URL}\" flower --basic_auth=\"${CELERY_FLOWER_USER}:${CELERY_FLOWER_PASSWORD}\""

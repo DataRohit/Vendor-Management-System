@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Set errexit to exit immediately if a command exits with a non-zero status
+set -o errexit
+
+# Set pipefail to cause a pipeline to return a failure status if any command in the pipeline fails
+set -o pipefail
+
+# Set nounset to exit if an unset variable is referenced
+set -o nounset
+
+
+# Apply migrations to the database using Django's manage.py script
+python manage.py makemigrations
+python manage.py migrate
+
+
+# Execute Django's development server with Werkzeug debugger enabled
+# Listening on all interfaces (0.0.0.0) on port 8000
+exec python manage.py runserver_plus 0.0.0.0:8000

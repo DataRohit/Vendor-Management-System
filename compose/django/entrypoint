@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Set errexit to exit immediately if a command exits with a non-zero status
+set -o errexit
+
+# Set pipefail to cause a pipeline to return a failure status if any command in the pipeline fails
+set -o pipefail
+
+# Set nounset to exit if an unset variable is referenced
+set -o nounset
+
+
+# Set the Celery broker URL using the REDIS_URL environment variable
+# N.B. If only .env files supported variable expansion...
+export CELERY_BROKER_URL="${REDIS_URL}"
+
+
+# Set default values for PostgreSQL user if not provided
+if [ -z "${POSTGRES_USER}" ]; then
+    base_postgres_image_default_user='postgres'
+    export POSTGRES_USER="${base_postgres_image_default_user}"
+fi
+
+
+# Set the DATABASE_URL using the provided PostgreSQL connection details
+export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+
+
+# Use Python to wait for PostgreSQL to become available before proceeding
+python << END
+import sys
+import time
+
+import psycopg
+
+suggest_unrecoverable_after = 30
+start = time.time()
+
+while True:
+    try:
+        psycopg.connect(
+            dbname="${POSTGRES_DB}",
+            user="${POSTGRES_USER}",
+            password="${POSTGRES_PASSWORD}",
+            host="${POSTGRES_HOST}",
+            port="${POSTGRES_PORT}",
+        )
+        break
+    except psycopg.OperationalError as error:
+        sys.stderr.write("Waiting for PostgreSQL to become available...\n")
+
+        if time.time() - start > suggest_unrecoverable_after:
+            sys.stderr.write("  This is taking longer than expected. The following exception may be indicative of an unrecoverable error: '{}'\n".format(error))
+
+    time.sleep(1)
+END
+
+
+# Inform that PostgreSQL is available
+>&2 echo 'PostgreSQL is available'
+
+
+# Execute the provided command
+exec "$@"

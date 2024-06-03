@@ -1,0 +1,78 @@
+# Define named volumes for persistent data storage
+volumes:
+    local_postgres_data: {} # Volume for PostgreSQL data
+    local_postgres_data_backups: {} # Volume for PostgreSQL data backups
+    local_redis_data: {} # Volume for Redis data
+
+# Define services
+services:
+    # Django service
+    django: &django
+        build:
+            context: .
+            dockerfile: ./compose/django/Dockerfile
+        container_name: vendor_management_system_django
+        depends_on:
+            - postgres
+            - redis
+        volumes:
+            - .:/app:z # Mount the current directory to /app in the container
+        env_file:
+            - ./.envs/.django.env
+            - ./.envs/.postgres.env # Load Django and PostgreSQL environment variables
+        ports:
+            - 8000:8000 # Map container port 8000 to host port 8000
+        command: /start # Start command for Django
+
+    # PostgreSQL service
+    postgres:
+        build:
+            context: .
+            dockerfile: ./compose/postgres/Dockerfile
+        container_name: vendor_management_system_local_postgres
+        volumes:
+            - local_postgres_data:/var/lib/postgresql/data # Mount volume for PostgreSQL data
+            - local_postgres_data_backups:/backups # Mount volume for PostgreSQL backups
+        env_file:
+            - ./.envs/.postgres.env # Load PostgreSQL environment variables
+        ports:
+            - 5432:5432 # Map container port 5432 to host port 5432
+
+    # Redis service
+    redis:
+        image: redis:7.2.5-alpine # Use Redis 7.2.5 Alpine image
+        container_name: vendor_management_system_local_redis
+        volumes:
+            - local_redis_data:/data # Mount volume for Redis data
+        ports:
+            - 6379:6379 # Map container port 6379 to host port 6379
+
+    # Celery worker service
+    celeryworker:
+        <<: *django # Inherit settings from the Django service
+        container_name: vendor_management_system_local_celeryworker
+        depends_on:
+            - redis
+        ports: [] # No ports exposed for Celery worker
+        command: /start-celeryworker # Start command for Celery worker
+
+    # Celery beat service
+    celerybeat:
+        <<: *django # Inherit settings from the Django service
+        container_name: vendor_management_system_local_celerybeat
+        depends_on:
+            - redis
+            - celeryworker
+        ports: [] # No ports exposed for Celery beat
+        command: /start-celerybeat # Start command for Celery beat
+
+    # Flower service for monitoring Celery
+    flower:
+        <<: *django # Inherit settings from the Django service
+        container_name: vendor_management_system_local_flower
+        depends_on:
+            - redis
+            - celeryworker
+        ports:
+            - 5555:5555 # Map container port 5555 to host port 5555
+        command: /start-flower # Start command for Flower

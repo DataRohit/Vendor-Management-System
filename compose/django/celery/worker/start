@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Set errexit to exit immediately if a command exits with a non-zero status
+set -o errexit
+
+# Set nounset to exit if an unset variable is referenced
+set -o nounset
+
+
+# Execute watchfiles command with the following arguments:
+# --filter python: Filter files for Python code
+# celery.__main__.main: Run the celery main function
+# --args '-A config.celery_app worker -l INFO': Pass additional arguments to the celery main function, specifying the celery app, worker mode, and log level INFO
+exec python -m watchfiles --filter python celery.__main__.main --args '-A config.celery_app worker -l INFO'
